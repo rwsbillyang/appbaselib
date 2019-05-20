@@ -29,7 +29,8 @@ enum class Status {
     OK,
     BIZ_KO, //可能API返回是结果有误的消息
     ERR,
-    LOADING
+    LOADING,
+    CONSUMED
 }
 
 /**
@@ -38,21 +39,19 @@ enum class Status {
 </T> */
 data class Resource<out T>(val status: Status, val data: T?, val message: String? = null, val bizCode: String? = null, val httpStatus:Int? = null) {
     companion object {
-        fun <T> success(data: T?): Resource<T> {
-            return Resource(Status.OK, data)
-        }
+        fun <T> success(data: T?): Resource<T>
+                = Resource(Status.OK, data)
 
-        fun <T> bizErr(ret: String, msg: String?, data: T? = null): Resource<T>
-        {
-            return Resource(Status.BIZ_KO, data, msg, ret)
-        }
+        fun <T> bizErr(ret: String, msg: String?, data: T? = null)
+                = Resource(Status.BIZ_KO, data, msg, ret)
 
-        fun <T> err(msg: String, data: T? = null, httpStatus:Int? = null): Resource<T> {
-            return Resource(Status.ERR, data, msg, null, httpStatus)
-        }
+        fun <T> err(msg: String, data: T? = null, httpStatus: Int? = null)
+                = Resource(Status.ERR, data, msg, null, httpStatus)
 
-        fun <T> loading(data:T?=null,msg: String? = null): Resource<T> {
-            return Resource(Status.LOADING, data, msg)
-        }
+        fun <T> loading(data: T? = null, msg: String? = null): Resource<T>
+                = Resource(Status.LOADING, data, msg)
+
+        fun <T> consumed(data: T? = null, msg: String? = null,ret: String? = null ,httpStatus: Int? = null)
+                = Resource(Status.CONSUMED, data, msg,ret,httpStatus)
     }
 }

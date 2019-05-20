@@ -6,7 +6,7 @@ import android.net.ConnectivityManager
 open class NetAwareApplication: Application() {
 
     companion object {
-        var Instance: NetAwareApplication? = null
+       lateinit var Instance: NetAwareApplication
 
         /**
          * 如果没有网络，发送请求时的错误提示，可随时更改，影响整个App全局

@@ -5,7 +5,7 @@ typealias OnErrHandler = (Int,String?) -> Unit
 
 /**
  *
- * @Deprecated
+ *
  *
  * 出现诸如404，500之内的错误的异常
  * refer to https://en.wikipedia.org/wiki/List_of_HTTP_status_codes

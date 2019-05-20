@@ -69,7 +69,7 @@ abstract class BaseRecyclerViewAdapter<ItemType> : RecyclerView.Adapter<BaseRecy
 
     override fun onBindViewHolder(holder: BaseViewHolder<ItemType>, position: Int) {
         list.let {
-            holder.bindToItem(list[position])
+            holder.bindToItem(list[position],position)
         }
     }
 
@@ -95,7 +95,7 @@ abstract class BaseRecyclerViewAdapter<ItemType> : RecyclerView.Adapter<BaseRecy
          * mIvRepoDetail.setText(String.valueOf(repo.description + "(" + repo.language + ")"));
          * </pre>
          * */
-        abstract fun bindToItem(item: ItemType?)
+        abstract fun bindToItem(item: ItemType?, position: Int)
 
     }
 

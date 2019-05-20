@@ -7,10 +7,10 @@ android {
 
 
     defaultConfig {
-        minSdkVersion 9
+        minSdkVersion 14
         targetSdkVersion 28
         versionCode 1
-        versionName "1.0.1"
+        versionName "1.1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -47,6 +47,9 @@ dependencies {
 
     //kotlin
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$rootProject.kotlinVersion"
+    // https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-reflect
+    implementation "org.jetbrains.kotlin:kotlin-reflect:$rootProject.kotlinVersion"
+
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$rootProject.coroutinesCoreVersion"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$rootProject.coroutinesVersion"
 

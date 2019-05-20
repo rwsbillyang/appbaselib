@@ -6,7 +6,7 @@ import androidx.fragment.app.Fragment
 import com.github.rwsbillyang.appbase.R
 import com.github.rwsbillyang.appbase.apiresponse.Resource
 import com.github.rwsbillyang.appbase.apiresponse.Status
-import com.github.rwsbillyang.appbase.util.setVisible
+import com.github.rwsbillyang.appbase.util.visible
 import com.orhanobut.logger.Logger
 import kotlinx.android.synthetic.main.loadingstate.*
 
@@ -22,22 +22,21 @@ open class LoadingFragment : Fragment() {
 
     protected open fun renderLoading(resource: Resource<*>?)
     {
-        Logger.i("updateLoading")
-
         val loadingVisible = resource?.status == Status.LOADING || resource?.status == Status.ERR
-        loading.setVisible(loadingVisible)
-        error_msg.setVisible(loadingVisible)
-        retry.setVisible(resource?.status == Status.ERR)
+
+        loading.visible =loadingVisible
+        error_msg.visible = loadingVisible
+        retry.visible = resource?.status == Status.ERR
 
 
         val progressvisible = resource?.status == Status.LOADING
-        progress_bar.setVisible(progressvisible)
+        progress_bar.visible = progressvisible
         if(progressvisible)
         {
             error_msg.text = getString(R.string.loading)
         }else if(resource?.status == Status.ERR) {
             error_msg.text = resource.message ?: resources.getString(R.string.unknown_error)
         }
-
+        Logger.i("updateLoading, loadingVisible=$loadingVisible,progressvisible=$progressvisible")
     }
 }

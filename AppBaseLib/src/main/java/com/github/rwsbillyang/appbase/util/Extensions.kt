@@ -1,12 +1,13 @@
 package com.github.rwsbillyang.appbase.util
 
 import android.app.Activity
-import android.app.Application
+import android.content.Context
 import android.graphics.drawable.Drawable
-import android.net.ConnectivityManager
+import android.util.Log
 import android.view.View
 import android.widget.ImageView
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestListener
@@ -27,15 +28,37 @@ fun ImageView.loadImg(url: String?, placeHolder: Drawable? = null,listener: Requ
         Glide.with(this.context).load(url).listener(listener).into(this)
     }
 }
+var View.visible: Boolean
+    get() = visibility == View.VISIBLE
+    set(value) {
+        visibility = if (value) View.VISIBLE else View.GONE
+    }
 
-fun View.setVisible(visible:Boolean) {
-    this.visibility = if(visible) View.VISIBLE else View.GONE
+fun View.hide() {
+    visible = false
 }
+
+fun View.show() {
+    visible = true
+}
+
+fun Any.log(message: String) {
+    if (BuildConfig.DEBUG) Log.i(this::class.simpleName, message)
+}
+
+fun Any.log(error: Throwable) {
+    if (BuildConfig.DEBUG)  Log.e(this::class.simpleName,error.message ?: "Error", error)
+}
+
+fun Any.log(message: String, error: Throwable) {
+    if (BuildConfig.DEBUG) Log.e(this::class.simpleName, message, error)
+}
+
 enum class ToastType{
     SUCCESS, NORMAL, WARNING, ERROR
 }
 
-fun Activity.toast(msg: CharSequence, duration: Int = Toast.LENGTH_SHORT,  type: ToastType = ToastType.NORMAL) {
+fun Context.toast(msg: CharSequence, duration: Int = Toast.LENGTH_SHORT, type: ToastType = ToastType.NORMAL) {
     when (type) {
         ToastType.WARNING -> Toasty.warning(this, msg, duration, true).show()
         ToastType.ERROR -> Toasty.error(this, msg, duration, true).show()
@@ -74,5 +97,42 @@ fun Activity.dispatchFailure(error: Throwable?) {
         } else {
             it.message?.let { toast(it, type = ToastType.ERROR) }
         }
+    }
+}
+
+@Deprecated("Use navigation in Android architecture components instead")
+inline fun AppCompatActivity.gotoFragment(fragment: Fragment,containerId:Int, pushStack: Boolean = true)
+{
+
+    if(pushStack){
+        supportFragmentManager
+            .beginTransaction()
+            .replace(containerId,fragment)
+            .addToBackStack(null)
+            .commit()
+    }else
+    {
+        supportFragmentManager
+            .beginTransaction()
+            .replace(containerId,fragment)
+            .commit()
+    }
+}
+
+@Deprecated("Use navigation in Android architecture components instead")
+inline fun Fragment.gotoFragment(fragment: Fragment,containerId:Int, pushStack: Boolean = true)
+{
+    if(pushStack){
+        requireFragmentManager()
+            .beginTransaction()
+            .replace(containerId,fragment)
+            .addToBackStack(null)
+            .commit()
+    }else
+    {
+        requireFragmentManager()
+            .beginTransaction()
+            .replace(containerId,fragment)
+            .commit()
     }
 }
