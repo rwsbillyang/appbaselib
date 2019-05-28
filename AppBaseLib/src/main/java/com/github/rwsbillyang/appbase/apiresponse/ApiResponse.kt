@@ -16,7 +16,7 @@
 
 package com.github.rwsbillyang.appbase.apiresponse
 
-import com.orhanobut.logger.Logger
+import com.github.rwsbillyang.appbase.util.logw
 import retrofit2.Response
 import java.util.regex.Pattern
 
@@ -89,7 +89,7 @@ data class ApiSuccessResponse<T>(
                 try {
                     Integer.parseInt(matcher.group(1))
                 } catch (ex: NumberFormatException) {
-                    Logger.w("cannot parse next page from %s", next)
+                    logw("cannot parse next page from $next")
                     null
                 }
             }

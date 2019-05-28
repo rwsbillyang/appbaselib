@@ -2,7 +2,8 @@ package com.github.rwsbillyang.appbase.apiresponse
 
 import androidx.lifecycle.*
 import com.github.rwsbillyang.appbase.NetAwareApplication
-import com.orhanobut.logger.Logger
+import com.github.rwsbillyang.appbase.util.log
+import com.github.rwsbillyang.appbase.util.logw
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.launch
@@ -61,6 +62,15 @@ class DataFetcher<RequestType,ResultType> {
      * 添加上名字，便于调试知道是哪个dataFetcher在执行取数据操作
      * */
     var debugName: String = ""
+
+    /**
+     * 表示发起调用的identifier，调用者发起调用时提供，然后Resource原样返回，
+     * 可以标示出该Resource是哪次发起的调用的返回结果.
+     * 若不提供，将为null，返回的Resource中的identifier同样为null
+     *
+     * 上面的debugName为repository提供调试名称，不向最终的调用者暴露该信息，同时它只是表示某一类调用，不表示某一个调用
+     * */
+    var identifier: Any? = null
     /**
      *
      * remoteAsBackend == false时，本地存储作为aside模式时：将以来自远程网络的数据为准，获取网络数据失败时才考虑本地数据
@@ -173,14 +183,18 @@ class DataFetcher<RequestType,ResultType> {
      * */
 //    var enableMemoryCache = false
 //    var cacheKey: String?  = null
-//    private val memoryCache: ConcurrentMap<String, ResultType?> = ConcurrentHashMap()
+    /**
+     * 每个dataFetcher获取数据时，应该不会有多线程问题，故使用Map而不是ConcurrentMap，同时避免空值击穿缓存问题
+     * 生命周期在每次请求后就结束了，故不起作用
+     * */
+//    private var memoryCache: MutableMap<String, ResultType?>? = null
 
     /**
      * 更新结果，更新后会通知UI/ViewModel中的监察者
      * */
     private fun setValue(newValue: Resource<ResultType>?) {
         if (newValue != null && result.value != newValue) {
-           // Logger.i("$debugName notify data changed...${newValue.status}")
+           // log("$debugName notify data changed...${newValue.status}")
             result.postValue(newValue)
         }
     }
@@ -197,36 +211,39 @@ class DataFetcher<RequestType,ResultType> {
         if (enableCreateNewThread) newSingleThreadContext("io") else EmptyCoroutineContext
     )
     {
-       // Logger.d("$debugName fetch data...")
+       // log("$debugName fetch data...")
         val localResult = fetchFromLocal()
-        setValue(Resource.success(localResult))
+        setValue(Resource.success(identifier,localResult))
 
         if (isForceRefreshBlock(localResult)) {
             if (NetAwareApplication.Instance.isNetworkAvailable()) {
                 launch {
                     fetchFromRemote()?.let {
                         notifyInterceptors(it)
+                        val res: Resource<ResultType> = it.toResource()
                         if (enableRemoteAsBackend) {
-                            val res: Resource<ResultType> = it.toResource()
                             if (res.status != Status.OK) {
                                 setValue(res) //非正常状态，告知UI层进行错误提示
                             } else {
-                                Logger.d("$debugName save data into local...")
-                                if (it.saveIntoLocalStorage() > 0)//有修改记录才再次查询本地数据并通知，否则无需再去查询
+                                val affected = it.saveIntoLocalStorage()
+                                log("$debugName/$identifier save data into local because affected $affected records...")
+                                if (affected > 0)//有修改记录才再次查询本地数据并通知，否则无需再去查询
                                 {
-                                    Logger.d("$debugName load data from local after save...")
-                                    setValue(Resource.success(fetchFromLocal()))
+                                    log("$debugName/$identifier reload data from local after save...")
+                                    setValue(Resource.success(identifier,fetchFromLocal()))
                                 }
                             }
                         } else {
-                            Logger.d("$debugName save data into local async...")
-                            launch { it.saveIntoLocalStorage() }
+                            if (res.status == Status.OK) {
+                                log("$debugName/$identifier save data into local async...")
+                                launch { it.saveIntoLocalStorage() }
+                            }
                             setValue(it.toResource())
                         }
                     }
                 }
             } else {
-                setValue(Resource.err(NetAwareApplication.ifNetWorkUnavailableString))
+                setValue(Resource.err(identifier,NetAwareApplication.ifNetWorkUnavailableString))
                 //if(enableRemoteAsBackend){ launch { setValue(Resource.success(localResult)) } }
             }
         }
@@ -235,35 +252,49 @@ class DataFetcher<RequestType,ResultType> {
     class NullValue: Any()
 
     private suspend fun fetchFromLocal(): ResultType? {
-
+//        if(enableMemoryCache && !cacheKey.isNullOrBlank() && memoryCache != null)
+//        {
+//            if(memoryCache!!.containsKey(cacheKey!!))
+//            {
+//                log("$debugName fetch data from memory cache")
+//                return memoryCache!!.get(cacheKey!!)
+//            }
+//        }
         localBlock?.let {
-            setValue(Resource.loading(null))
-            Logger.d("$debugName fetch data from local...")
-            if(enableMetrics)
+            setValue(Resource.loading(identifier,null))
+            log("$debugName/$identifier fetch data from local...")
+            val result = if(enableMetrics)
             {
                 val now = System.currentTimeMillis()
                 val ret = withContext(IO) { localBlock!!() }
                 val delta = System.currentTimeMillis()- now
-                Logger.d("$debugName fetch data from local, spend $delta ms")
+                log("$debugName/$identifier fetch data from local, spend $delta ms")
 
-                return ret
+                ret
             }else
             {
-                return withContext(IO) { localBlock!!() }
+                withContext(IO) { localBlock!!() }
             }
+//            if(enableMemoryCache && !cacheKey.isNullOrBlank())
+//            {
+//                log("$debugName save data into memory cache")
+//                if(memoryCache == null) memoryCache = HashMap()
+//                memoryCache!!.put(cacheKey!!,result)
+//            }
+            return result
         }
         return null
     }
 
     private suspend fun fetchFromRemote(): ApiResponse<RequestType>? {
         remoteBlock?.let {
-            setValue(Resource.loading(null))
-            Logger.d("$debugName fetch data from remote...")
+            setValue(Resource.loading(identifier,null))
+            log("$debugName/$identifier fetch data from remote...")
             if(enableMetrics){
                 val now = System.currentTimeMillis()
                 val ret = withContext(IO) { remoteBlock!!().makeApiResponse() }
                 val delta = System.currentTimeMillis()- now
-                Logger.d("$debugName fetch data from remote, spend $delta ms")
+                log("$debugName/$identifier fetch data from remote, spend $delta ms")
 
                 return ret
             }
@@ -278,8 +309,8 @@ class DataFetcher<RequestType,ResultType> {
     private fun Call<RequestType>.makeApiResponse(): ApiResponse<RequestType> {
         return try {
             this.execute().let {
-                Logger.d(
-                    "$debugName response: message=${it.message()}, raw=${it.raw()}," +
+                log(
+                    "$debugName/$identifier response: message=${it.message()}, raw=${it.raw()}," +
                             " success=${it.isSuccessful},code=${it.code()},errBody=${it.errorBody()}"
                 )
                 if (it.isSuccessful)
@@ -289,16 +320,16 @@ class DataFetcher<RequestType,ResultType> {
                 }
             }
         } catch (ioe: IOException) {
-            val msg = "$debugName IOException: ${ioe.message}"
-            Logger.w(msg)
+            val msg = "$debugName/$identifier IOException: ${ioe.message}"
+            logw(msg)
             ApiErrorResponse(msg)
         } catch (e: RuntimeException) {
-            val msg = "$debugName RuntimeException: ${e.message}"
-            Logger.w(msg)
+            val msg = "$debugName/$identifier RuntimeException: ${e.message}"
+            logw(msg)
             ApiErrorResponse(msg)
         } catch (e: Exception) {
-            val msg = "$debugName Exception: ${e.message}"
-            Logger.w(msg)
+            val msg = "$debugName/$identifier Exception: ${e.message}"
+            logw(msg)
             ApiErrorResponse(msg)
         }
     }
@@ -316,20 +347,20 @@ class DataFetcher<RequestType,ResultType> {
      * 返回null则不更新liveData中的值，支持ResponseBox封装的值的提取处理
      * */
     private fun ApiResponse<RequestType>.toResource(): Resource<ResultType> {
-        if (this.consumed) return Resource.consumed()
+        if (this.consumed) return Resource.consumed(identifier)
 
         return when (this) {
             is ApiEmptyResponse -> {
-                Logger.w("$debugName got empty response from remote,correct?")
-                 Resource.err("return nothing", null)
+                logw("$debugName/$identifier got empty response from remote,correct?")
+                 Resource.err(identifier,"return nothing", null)
             }
             is ApiErrorResponse -> {
                 onFetchFailBlock?.let { it(this.code, this.errorMessage) }
-                Resource.err(this.errorMessage, null, this.code)
+                Resource.err(identifier,this.errorMessage, null, this.code)
             }
             is ApiSuccessResponse -> {
                 val apiResponse = processResponseBlock(this)
-                Resource.success(converterBlock(apiResponse))
+                Resource.success(identifier,converterBlock(apiResponse))
             }
         }
     }
@@ -352,7 +383,7 @@ class DataFetcher<RequestType,ResultType> {
         fun addInterceptor(owner: LifecycleOwner, status: ApiResponseStatus, interceptor: ApiResponseInterceptor)
         {
             map[interceptor]?.let {
-                Logger.w("interceptor exsit")
+                logw("interceptor exsit")
                 return
             }
 

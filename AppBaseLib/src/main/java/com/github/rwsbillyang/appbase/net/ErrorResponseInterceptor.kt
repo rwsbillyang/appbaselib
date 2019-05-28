@@ -1,7 +1,7 @@
 package com.github.rwsbillyang.appbase.net
 
 
-import com.orhanobut.logger.Logger
+import com.github.rwsbillyang.appbase.util.logw
 import okhttp3.Interceptor
 import okhttp3.Response
 import java.io.IOException
@@ -24,7 +24,7 @@ class ErrorResponseInterceptor(private var errHandler: OnErrHandler): Intercepto
             {
                 in ErrorCodes ->{
                     val msg = response.request().url().encodedPath() + " return " + (ErrorMap[code])?: response.message()
-                    Logger.e(msg)
+                    logw(msg)
                     errHandler(code, msg)
                 }
             }

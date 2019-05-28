@@ -28,15 +28,15 @@ open class NetAwareApplication: Application() {
     fun isNetworkAvailable(): Boolean = CONNECTIVITY_MANAGER?.activeNetworkInfo?.isConnected ?: false
     //    {
 //        if(CONNECTIVITY_MANAGER == null) {
-//            Logger.w("CONNECTIVITY_MANAGER is null")
+//            logw("CONNECTIVITY_MANAGER is null")
 //            return false
 //        }
 //        if(CONNECTIVITY_MANAGER!!.activeNetworkInfo == null)
 //        {
-//            Logger.w("CONNECTIVITY_MANAGER.activeNetworkInfo is null")
+//            logw("CONNECTIVITY_MANAGER.activeNetworkInfo is null")
 //            return false
 //        }
-//        Logger.i("state= $(CONNECTIVITY_MANAGER!!.activeNetworkInfo!!.detailedState)")
+//        log("state= $(CONNECTIVITY_MANAGER!!.activeNetworkInfo!!.detailedState)")
 //       return CONNECTIVITY_MANAGER!!.activeNetworkInfo!!.isConnected
 //    }
 
@@ -56,22 +56,22 @@ open class NetAwareApplication: Application() {
             callback = object: ConnectivityManager.NetworkCallback(){
                 override fun onAvailable(network: Network){
                     super.onAvailable(network!!)
-                    Logger.d("network available")
+                    log("network available")
                 }
 
                 override fun onUnavailable() {
                     super.onUnavailable()
-                    Logger.w("network unavailable")
+                    logw("network unavailable")
                 }
 
                 override fun onLosing(network: Network?, maxMsToLive: Int) {
                     super.onLosing(network, maxMsToLive)
-                    Logger.w("network is losing $maxMsToLive")
+                    logw("network is losing $maxMsToLive")
                 }
 
                 override fun onLost(network: Network?) {
                     super.onLost(network)
-                    Logger.w("network lost")
+                    logw("network lost")
                 }
             }
             CONNECTIVITY_MANAGER.requestNetwork(NetworkRequest.Builder().build(),callback )

@@ -3,7 +3,6 @@ package com.github.rwsbillyang.appbase.util
 import android.app.Activity
 import android.content.Context
 import android.graphics.drawable.Drawable
-import android.util.Log
 import android.view.View
 import android.widget.ImageView
 import android.widget.Toast
@@ -12,7 +11,6 @@ import androidx.fragment.app.Fragment
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestListener
 import com.github.rwsbillyang.appbase.BuildConfig
-import com.orhanobut.logger.Logger
 import es.dmoral.toasty.Toasty
 import java.net.ConnectException
 import java.net.SocketTimeoutException
@@ -42,17 +40,7 @@ fun View.show() {
     visible = true
 }
 
-fun Any.log(message: String) {
-    if (BuildConfig.DEBUG) Log.i(this::class.simpleName, message)
-}
 
-fun Any.log(error: Throwable) {
-    if (BuildConfig.DEBUG)  Log.e(this::class.simpleName,error.message ?: "Error", error)
-}
-
-fun Any.log(message: String, error: Throwable) {
-    if (BuildConfig.DEBUG) Log.e(this::class.simpleName, message, error)
-}
 
 enum class ToastType{
     SUCCESS, NORMAL, WARNING, ERROR
@@ -77,7 +65,7 @@ fun Fragment.toast(msg: CharSequence, duration: Int = Toast.LENGTH_SHORT, type: 
         }
     }else
     {
-        Logger.w("no context associated with?")
+        logw("no context associated with?")
     }
 
 }

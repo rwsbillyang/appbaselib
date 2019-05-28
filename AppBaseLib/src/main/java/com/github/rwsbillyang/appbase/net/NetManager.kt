@@ -2,8 +2,8 @@ package com.github.rwsbillyang.appbase.net
 
 
 import android.os.Build
+import com.github.rwsbillyang.appbase.util.logw
 import com.google.gson.GsonBuilder
-import com.orhanobut.logger.Logger
 import okhttp3.*
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -175,11 +175,11 @@ object NetManager {
 
                     builder.connectionSpecs(specs)
                 } catch (exc: Exception) {
-                    Logger.e("Error while setting TLS 1.2, $exc.message")
+                    logw("Error while setting TLS 1.2, $exc.message")
                 }
 
             } else {
-                Logger.e("Build.VERSION.SDK_INT=$(Build.VERSION.SDK_INT) , Not Support TLS")
+                logw("Build.VERSION.SDK_INT=$(Build.VERSION.SDK_INT) , Not Support TLS")
             }
 
         }
@@ -187,7 +187,7 @@ object NetManager {
         if (provider.enableCustomTrust()) {
             if(provider.cetrificatesInputStreamList().isNullOrEmpty())
             {
-               Logger.w("forget to configure your certificates resources?")
+               logw("forget to configure your certificates resources?")
             }else
             {
                 builder.socketFactory(getSSLSocketFactory(provider.cetrificatesInputStreamList()!!))

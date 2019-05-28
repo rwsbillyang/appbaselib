@@ -7,7 +7,6 @@ import com.github.rwsbillyang.appbase.R
 import com.github.rwsbillyang.appbase.apiresponse.Resource
 import com.github.rwsbillyang.appbase.apiresponse.Status
 import com.github.rwsbillyang.appbase.util.visible
-import com.orhanobut.logger.Logger
 import kotlinx.android.synthetic.main.loadingstate.*
 
 /**
@@ -37,6 +36,6 @@ open class LoadingFragment : Fragment() {
         }else if(resource?.status == Status.ERR) {
             error_msg.text = resource.message ?: resources.getString(R.string.unknown_error)
         }
-        Logger.i("updateLoading, loadingVisible=$loadingVisible,progressvisible=$progressvisible")
+        //log("updateLoading, loadingVisible=$loadingVisible,progressvisible=$progressvisible")
     }
 }

@@ -10,7 +10,7 @@ android {
         minSdkVersion 14
         targetSdkVersion 28
         versionCode 1
-        versionName "1.1.0"
+        versionName "1.2.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -85,7 +85,7 @@ dependencies {
 
 
     //logger and timber https://github.com/orhanobut/logger
-    implementation 'com.orhanobut:logger:2.2.0'
+    //implementation 'com.orhanobut:logger:2.2.0'
     //https://github.com/JakeWharton/timber
     //implementation 'com.jakewharton.timber:timber:4.7.0'
 

@@ -1,3 +1,16 @@
+1.2.0
+--------------
+1. 添加PageHandler 用于加载更多和更新
+2. 添加onSwipeListener 用于监听ScrollView的横向滑动
+3. 添加Spannable DSL 用于简化span的使用
+4. 在DataFetcher中添加identifier标识符，用于标示具体的哪一次调用
+5. 去掉对logger库的依赖，改用安卓标准Log的扩展用法
+6. 改进RecycleView的adapter，支持分页
+7. 修复DataFetcher中当从远程加载失败时也保存的bug
+8. 去掉业务逻辑错误的Resource类型，由状态码代替
+
+1.1.0
+---------------
 1. 重构DataFetcher
 1.1修正isForceRefresh未起作用的问题
 1.2 添加localStorrageAside默认为true的参数，表示本地存储只作为aside模式，即缓存模式；为false时，表示网络数据为本地存储的后端模式
