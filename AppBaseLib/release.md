@@ -1,3 +1,8 @@
+1.2.1
+--------------
+1. 添加 Preference PreferencesUtil 方便使用
+2. 修复完善pageHandler，当有数据时，才上报新的当前页
+
 1.2.0
 --------------
 1. 添加PageHandler 用于加载更多和更新

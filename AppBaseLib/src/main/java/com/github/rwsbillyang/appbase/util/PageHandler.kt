@@ -29,6 +29,8 @@ data class PageHandlerState(var hasMore: Boolean = true, var currentPage: Int = 
  * @param currentPage 正在进行的当前页,一旦传入初始值，后续的当前值由PageHandler维护。
  * 当加载更多成功后，会+1,下次再加载更多，会在新的currentPage基础上进行
  * 当加载最新成功后，会-1，继续下拉刷新，则会在新的currentPage基础上进行
+ * @param pageSize: 一页加载多少条数据，当加载的数据数量少于它时，将表示没有更多数据了
+ *
  * @param doLoadPage 加载下一个页面的lamada
  *
  *
@@ -39,6 +41,7 @@ data class PageHandlerState(var hasMore: Boolean = true, var currentPage: Int = 
 open class PageHandler<QueryParameterType,ResultType>(
     val direction: LoadDirection,
     var currentPage: Int,
+    val pageSize: Int,
     val doLoadPage: (query:QueryParameterType, page: Int, identifier: Any?) -> LiveData<Resource<List<ResultType>>>
 ): Observer<Resource<List<ResultType>>> {
     private var _loadingResultLiveData: LiveData<Resource<List<ResultType>>>? = null
@@ -91,6 +94,7 @@ open class PageHandler<QueryParameterType,ResultType>(
             if(currentPage <= 0)
             {
                 logw("has reached the first page,no more data,currentPage=$currentPage")
+                pageList.value = Resource.err(identifier,"no more data")
                 return false
             }else
             {
@@ -138,10 +142,12 @@ open class PageHandler<QueryParameterType,ResultType>(
                 Status.OK -> {
                     unregister()
                     isloadingPage = false
-                    _hasMore = result.data?.isNotEmpty()?: false
-                    currentPage = currentPage + direction.vaule
-                    log("send pageVaule $currentPage, identifier:${result.identifier}")
-                    pageIndex.value = Resource.success(result.identifier,currentPage)
+                    _hasMore = (result.data?.size ?:0) >= pageSize
+                    if( (result.data?.size ?:0) > 0){
+                        currentPage = currentPage + direction.vaule
+                        log("send pageVaule $currentPage, identifier:${result.identifier}")
+                        pageIndex.value = Resource.success(result.identifier,currentPage)
+                    }
                 }
                 else -> {
                     unregister()
