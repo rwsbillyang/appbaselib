@@ -70,7 +70,7 @@ class DataFetcher<RequestType,ResultType> {
      *
      * 上面的debugName为repository提供调试名称，不向最终的调用者暴露该信息，同时它只是表示某一类调用，不表示某一个调用
      * */
-    var identifier: Any? = null
+    var identifier: Any? = ""
     /**
      *
      * remoteAsBackend == false时，本地存储作为aside模式时：将以来自远程网络的数据为准，获取网络数据失败时才考虑本地数据
@@ -226,16 +226,19 @@ class DataFetcher<RequestType,ResultType> {
                                 setValue(res) //非正常状态，告知UI层进行错误提示
                             } else {
                                 val affected = it.saveIntoLocalStorage()
-                                log("$debugName/$identifier save data into local because affected $affected records...")
+                                log("$debugName:$identifier save data into local because affected $affected records...")
                                 if (affected > 0)//有修改记录才再次查询本地数据并通知，否则无需再去查询
                                 {
-                                    log("$debugName/$identifier reload data from local after save...")
+                                    log("$debugName:$identifier reload data from local after save...")
                                     setValue(Resource.success(identifier,fetchFromLocal()))
+                                }else{
+                                    log("$debugName:$identifier skip reload data from local because no affected records")
+                                    setValue(it.toResource())
                                 }
                             }
                         } else {
                             if (res.status == Status.OK) {
-                                log("$debugName/$identifier save data into local async...")
+                                log("$debugName:$identifier save data into local async...")
                                 launch { it.saveIntoLocalStorage() }
                             }
                             setValue(it.toResource())
@@ -262,13 +265,13 @@ class DataFetcher<RequestType,ResultType> {
 //        }
         localBlock?.let {
             setValue(Resource.loading(identifier,null))
-            log("$debugName/$identifier fetch data from local...")
+            log("$debugName:$identifier fetch data from local...")
             val result = if(enableMetrics)
             {
                 val now = System.currentTimeMillis()
                 val ret = withContext(IO) { localBlock!!() }
                 val delta = System.currentTimeMillis()- now
-                log("$debugName/$identifier fetch data from local, spend $delta ms")
+                log("$debugName:$identifier fetch data from local, spend $delta ms")
 
                 ret
             }else
@@ -289,12 +292,12 @@ class DataFetcher<RequestType,ResultType> {
     private suspend fun fetchFromRemote(): ApiResponse<RequestType>? {
         remoteBlock?.let {
             setValue(Resource.loading(identifier,null))
-            log("$debugName/$identifier fetch data from remote...")
+            log("$debugName:$identifier fetch data from remote...")
             if(enableMetrics){
                 val now = System.currentTimeMillis()
                 val ret = withContext(IO) { remoteBlock!!().makeApiResponse() }
                 val delta = System.currentTimeMillis()- now
-                log("$debugName/$identifier fetch data from remote, spend $delta ms")
+                log("$debugName:$identifier fetch data from remote, spend $delta ms")
 
                 return ret
             }
@@ -310,7 +313,7 @@ class DataFetcher<RequestType,ResultType> {
         return try {
             this.execute().let {
                 log(
-                    "$debugName/$identifier response: message=${it.message()}, raw=${it.raw()}," +
+                    "$debugName:$identifier response: message=${it.message()}, raw=${it.raw()}," +
                             " success=${it.isSuccessful},code=${it.code()},errBody=${it.errorBody()}"
                 )
                 if (it.isSuccessful)
@@ -320,17 +323,17 @@ class DataFetcher<RequestType,ResultType> {
                 }
             }
         } catch (ioe: IOException) {
-            val msg = "$debugName/$identifier IOException: ${ioe.message}"
+            val msg = "$debugName:$identifier IOException: ${ioe.message}"
             logw(msg)
-            ApiErrorResponse(msg)
+            ApiErrorResponse("IOException: ${ioe.message}")
         } catch (e: RuntimeException) {
-            val msg = "$debugName/$identifier RuntimeException: ${e.message}"
+            val msg = "$debugName:$identifier RuntimeException: ${e.message}"
             logw(msg)
-            ApiErrorResponse(msg)
+            ApiErrorResponse("RuntimeException: ${e.message}")
         } catch (e: Exception) {
-            val msg = "$debugName/$identifier Exception: ${e.message}"
+            val msg = "$debugName:$identifier Exception: ${e.message}"
             logw(msg)
-            ApiErrorResponse(msg)
+            ApiErrorResponse("Exception: ${e.message}")
         }
     }
 
@@ -351,7 +354,7 @@ class DataFetcher<RequestType,ResultType> {
 
         return when (this) {
             is ApiEmptyResponse -> {
-                logw("$debugName/$identifier got empty response from remote,correct?")
+                logw("$debugName:$identifier got empty response from remote,correct?")
                  Resource.err(identifier,"return nothing", null)
             }
             is ApiErrorResponse -> {

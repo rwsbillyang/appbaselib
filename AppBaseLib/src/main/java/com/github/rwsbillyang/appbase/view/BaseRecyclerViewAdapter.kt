@@ -12,13 +12,13 @@ import com.github.rwsbillyang.appbase.util.logw
 /**
  * 简化RecyclerView.Adapter的使用，通常与PageHandler联合使用
  */
-abstract class BaseRecyclerViewAdapter<ItemType,VH: RecyclerView.ViewHolder> : RecyclerView.Adapter<VH>() {
+abstract class PageRecyclerViewAdapter<T,VH: RecyclerView.ViewHolder> : RecyclerView.Adapter<VH>() {
 
-    private var list: List<ItemType> = ArrayList()
+    private var list: List<T> = ArrayList()
 
     val items get() = list
 
-    fun getItem(position: Int):ItemType?{
+    fun getItem(position: Int):T?{
         if (position < 0 || position >= list.size)
         {
             logw("IndexOutOfBounds,position=$position, list.size=${list.size}")
@@ -41,7 +41,7 @@ abstract class BaseRecyclerViewAdapter<ItemType,VH: RecyclerView.ViewHolder> : R
     /**
      * 添加新数据，通常用于加载更多
      * */
-    fun addListAtEnd(newList: List<ItemType>?) {
+    fun addListAtEnd(newList: List<T>?) {
         if (newList == null || newList.isEmpty()) {
             logw("newList is null or empty when addListAtEnd")
         } else {
@@ -53,7 +53,7 @@ abstract class BaseRecyclerViewAdapter<ItemType,VH: RecyclerView.ViewHolder> : R
     /**
      * 添加新数据，通常用于下拉刷新
      * */
-    fun addListAtStart(newList: List<ItemType>?) {
+    fun addListAtStart(newList: List<T>?) {
         if (newList == null || newList.isEmpty()) {
             logw("newList is null or empty when addListAtStart")
         } else {
@@ -65,7 +65,7 @@ abstract class BaseRecyclerViewAdapter<ItemType,VH: RecyclerView.ViewHolder> : R
     /**
      * 指定新数据,会覆盖以前的老旧数据
      * */
-    fun setList(newList: List<ItemType>?)
+    fun setList(newList: List<T>?)
     {
         resetList()
         if (!newList.isNullOrEmpty()) {
@@ -98,9 +98,18 @@ abstract class BaseRecyclerViewAdapter<ItemType,VH: RecyclerView.ViewHolder> : R
  * https://developer.android.google.cn/reference/androidx/recyclerview/widget/AsyncListDiffer.html
  * https://github.com/googlesamples/android-architecture-components/blob/master/GithubBrowserSample/app/src/main/java/com/android/example/github/ui/common/DataBoundListAdapter.kt
  */
-abstract class BaseRecyclerViewAdapterDiff<ItemType,VH: RecyclerView.ViewHolder>(diffCallback: DiffUtil.ItemCallback<ItemType>):
+abstract class DiffRecyclerViewAdapter<T,VH: RecyclerView.ViewHolder>(diffCallback: DiffUtil.ItemCallback<T>):
     RecyclerView.Adapter<VH>() {
     private val mDiffer = AsyncListDiffer(this, diffCallback)
+
+    open fun getItem(position: Int):T?{
+        if (position < 0 || position >= getItemCount())
+        {
+            logw("IndexOutOfBounds,position=$position, list.size=${getItemCount()}")
+            return null
+        }
+        return mDiffer.getCurrentList().get(position)
+    }
 
     /**
      * 子类listAdapter需要指定item的layout，如R.layout.item_xxx
@@ -115,15 +124,100 @@ abstract class BaseRecyclerViewAdapterDiff<ItemType,VH: RecyclerView.ViewHolder>
     override fun getItemCount() = mDiffer.getCurrentList().size
 
 
-    fun submitList(newList: List<ItemType>?) {
+    fun submitList(newList: List<T>?) {
         mDiffer.submitList(newList)
     }
 
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+   open override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
         val view = LayoutInflater.from(parent.context)
             .inflate(getItemLayout(), parent, false)
         return createViewHolder(view)
     }
 }
 
+
+
+abstract class HeaderFooterAdapter<T,VH: RecyclerView.ViewHolder>(diffCallback: DiffUtil.ItemCallback<T>)
+    :DiffRecyclerViewAdapter<T,VH>(diffCallback){
+
+    companion object{
+        const val VIEW_TYPE_ITEM = 0 // Normal list item
+        const val VIEW_TYPE_HEADER = 1  // Header
+        const val VIEW_TYPE_FOOTER = 2  // Footer
+    }
+
+
+    /**
+     * Default header view is disabled, override in subclass and return true if want to enable it.
+     */
+    protected fun isHeaderEnabled() = false
+    /**
+     * @return Custom header view, but override [.isHeaderEnabled] and return true first.
+     */
+    protected fun createHeaderView(): View? {
+        return null
+    }
+
+    /**
+     * Default footer view is disabled, override in subclass and return true if want to enable it.
+     */
+    protected fun isFooterEnabled() = false
+    /**
+     * @return Custom footer view, but override [.isFooterEnabled] and return true first.
+     */
+    protected fun createFooterView(): View? {
+        return null
+    }
+
+//    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int):  VH {
+//        return if (viewType == VIEW_TYPE_FOOTER) {
+//            val header = createHeaderView()
+//            if(header == null ) throw IllegalStateException("header view cannot be null")
+//
+//            object : RecyclerView.ViewHolder(header!!) {
+//
+//            }
+//        }else if(viewType == VIEW_TYPE_HEADER){
+//            object : RecyclerView.ViewHolder(createHeaderView()) {
+//
+//            }
+//        }
+//        else super.onCreateViewHolder(parent, viewType)
+//    }
+
+    override fun onBindViewHolder(holder: VH, position: Int) {
+        if (getItemViewType(position) == VIEW_TYPE_ITEM) {
+            bindVH(holder, position)
+        }
+    }
+    abstract fun bindVH(holder: VH, position: Int)
+
+    override fun getItemViewType(position: Int): Int {
+        return if(isHeaderEnabled() && position == 0){
+            VIEW_TYPE_HEADER
+        } else if (isFooterEnabled() && position == itemCount - 1) {
+            VIEW_TYPE_FOOTER
+        } else VIEW_TYPE_ITEM
+    }
+
+    override fun getItemCount(): Int {
+        var itemCount = super.getItemCount()
+        if (isHeaderEnabled()) {
+            itemCount += 1
+        }
+        if (isFooterEnabled()) {
+            itemCount += 1
+        }
+        return itemCount
+    }
+
+    override fun getItem(position: Int): T? {
+        return  when(getItemViewType(position)){
+            VIEW_TYPE_FOOTER -> null
+            VIEW_TYPE_FOOTER -> null
+            VIEW_TYPE_ITEM -> super.getItem(position)
+            else -> null
+        }
+
+    }
+}
