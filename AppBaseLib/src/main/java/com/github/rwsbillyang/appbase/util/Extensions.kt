@@ -2,10 +2,12 @@ package com.github.rwsbillyang.appbase.util
 
 import android.app.Activity
 import android.content.Context
+import android.content.DialogInterface
 import android.graphics.drawable.Drawable
 import android.view.View
 import android.widget.ImageView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import com.bumptech.glide.Glide
@@ -46,6 +48,9 @@ enum class ToastType{
     SUCCESS, NORMAL, WARNING, ERROR
 }
 
+fun Context.toast(msgId: Int, duration: Int = Toast.LENGTH_SHORT, type: ToastType = ToastType.NORMAL){
+    toast(resources.getString(msgId),duration,type)
+}
 fun Context.toast(msg: CharSequence, duration: Int = Toast.LENGTH_SHORT, type: ToastType = ToastType.NORMAL) {
     when (type) {
         ToastType.WARNING -> Toasty.warning(this, msg, duration, true).show()
@@ -53,6 +58,9 @@ fun Context.toast(msg: CharSequence, duration: Int = Toast.LENGTH_SHORT, type: T
         ToastType.NORMAL -> Toasty.info(this, msg, duration, false).show()
         ToastType.SUCCESS -> Toasty.success(this, msg, duration, true).show()
     }
+}
+fun Fragment.toast(msgId: Int , duration: Int = Toast.LENGTH_SHORT, type: ToastType = ToastType.NORMAL){
+    toast(resources.getString(msgId), duration,type)
 }
 fun Fragment.toast(msg: CharSequence, duration: Int = Toast.LENGTH_SHORT, type: ToastType = ToastType.NORMAL) {
     if(this.context!=null)
@@ -67,7 +75,34 @@ fun Fragment.toast(msg: CharSequence, duration: Int = Toast.LENGTH_SHORT, type: 
     {
         logw("no context associated with?")
     }
+}
+fun Fragment.showDialog(title: String, msg: String,
+                         positiveBtnText: String, negativeBtnText: String?,
+                         positiveBtnClickListener: DialogInterface.OnClickListener,
+                         negativeBtnClickListener: DialogInterface.OnClickListener?): AlertDialog {
+    val builder = AlertDialog.Builder(this.requireContext())
+        .setTitle(title)
+        .setMessage(msg)
+        .setCancelable(true)
+        .setPositiveButton(positiveBtnText, positiveBtnClickListener)
+    if (negativeBtnText != null)
+        builder.setNegativeButton(negativeBtnText, negativeBtnClickListener)
+    val alert = builder.create()
+    alert.show()
+    return alert
+}
 
+fun Fragment.showDialog(titleResId: Int, msgResId: Int,
+                        positiveBtnTextResId: Int, negativeBtnTextResId: Int?,
+                        positiveBtnClickListener: DialogInterface.OnClickListener,
+                        negativeBtnClickListener: DialogInterface.OnClickListener?,extraMsg:String? = null): AlertDialog {
+    val context = this.requireContext()
+    val title = context.resources.getString(titleResId)
+    val msg = if(extraMsg == null) context.resources.getString(msgResId) else context.resources.getString(msgResId,extraMsg)
+    val positiveBtnText = context.resources.getString(positiveBtnTextResId)
+    val negativeBtnText = negativeBtnTextResId?.let{ context.resources.getString(negativeBtnTextResId) }
+
+    return showDialog(title, msg, positiveBtnText, negativeBtnText,positiveBtnClickListener, negativeBtnClickListener)
 }
 
 fun Activity.dispatchFailure(error: Throwable?) {

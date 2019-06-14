@@ -1,6 +1,7 @@
 package com.github.rwsbillyang.appbase.apiresponse
 
 import androidx.lifecycle.*
+import androidx.lifecycle.Observer
 import com.github.rwsbillyang.appbase.NetAwareApplication
 import com.github.rwsbillyang.appbase.util.log
 import com.github.rwsbillyang.appbase.util.logw
@@ -11,19 +12,31 @@ import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.withContext
 import retrofit2.Call
 import java.io.IOException
+import java.util.*
+import kotlin.collections.HashMap
 import kotlin.coroutines.EmptyCoroutineContext
 
 /**
  * 从远程返回的payload数据类型，从本地存储返回的数据类型，以及返回给调用者的数据类型均为T
  *
  * 这是最常用的情景
+ *
+ * @param init DataFetcher的各lambda初始化代码块
+ * @return LiveData<Resource<T>> 需要在主线程中observe然后进行UI更新，且须由lifeCycleOwner进行observe
+ * 返回值不能在主线程中进行observeForever
  * */
-fun <T> dataFetcher(init: DataFetcher<T,T>.() -> Unit): LiveData<Resource<T>> {
+fun <T> dataFetcher(init: DataFetcher<T,T>.() -> Unit): LiveData<Resource<T>> = observableDataFetcher(init).asLiveData()
+
+/**
+ * dataFetcher的observable版，去除LiveData在background中运行的限制
+ * */
+fun <T> observableDataFetcher(init: DataFetcher<T,T>.() -> Unit): ObservableResource<Resource<T>> {
     val fetcher = DataFetcher<T,T>()
     fetcher.init()
     fetcher.fetchData()
-    return fetcher.asLiveData()
+    return fetcher.observableResult
 }
+
 
 /**
  * RequestType表示从远程请求的payload数据类型，然后直接送往本地存储，故传递的数据类型也是RequestType
@@ -32,13 +45,46 @@ fun <T> dataFetcher(init: DataFetcher<T,T>.() -> Unit): LiveData<Resource<T>> {
  * 最终DataFetcher返回的给调用者的payload数据类型是ResultType
  *
  * 当从远程返回的payload数据类型，需要变换时，用此函数
+ *
+ * @return LiveData<Resource<T>> 需要在主线程中observe然后进行UI更新，且须由lifeCycleOwner进行observe
+ * 返回值不能在主线程中进行observeForever
  * */
-fun <RequestType,ResultType> dataFetcher2(init: DataFetcher<RequestType,ResultType>.() -> Unit): LiveData<Resource<ResultType>> {
+fun <RequestType,ResultType> dataFetcher2(init: DataFetcher<RequestType,ResultType>.() -> Unit)
+        = observableDataFetcher2(init).asLiveData()
+
+/**
+ * dataFetcher2的Observable限制
+ * */
+fun <RequestType,ResultType> observableDataFetcher2(init: DataFetcher<RequestType,ResultType>.() -> Unit): ObservableResource<Resource<ResultType>> {
     val fetcher = DataFetcher<RequestType,ResultType>()
     fetcher.init()
     fetcher.fetchData()
-    return fetcher.asLiveData()
+    return fetcher.observableResult
 }
+
+class ObservableResource<T>(var data: T? = null): Observable()
+{
+    /**
+     * 只要有赋值动作，就会触发观察者调用，且和观察者处在同一调用线程中，对于UI观察者需注意
+     * */
+    fun setValue(value: T?)
+    {
+        data = value
+
+        result.postValue(value)
+
+        setChanged()// mark as value changed
+        notifyObservers(value)// trigger notification
+    }
+
+    private val result = MediatorLiveData<T>()
+    /**
+     * 请求得到的数据储存于此，被viewModel中的LiveData观察
+     * */
+    fun asLiveData() = result as LiveData<T>
+
+}
+
 /**
  * RequestType表示从远程请求的payload数据类型，然后直接送往本地存储，故传递的数据类型也是RequestType
  * ResultType表示从本地存储中所取出来的payload类型，
@@ -47,11 +93,15 @@ fun <RequestType,ResultType> dataFetcher2(init: DataFetcher<RequestType,ResultTy
  * */
 class DataFetcher<RequestType,ResultType> {
 
-    private val result = MediatorLiveData<Resource<ResultType>>()
+    //private val result = MediatorLiveData<Resource<ResultType>>()
     /**
      * 请求得到的数据储存于此，被viewModel中的LiveData观察
      * */
-    fun asLiveData() = result as LiveData<Resource<ResultType>>
+    //fun asLiveData() = result as LiveData<Resource<ResultType>>
+
+    val observableResult = ObservableResource<Resource<ResultType>>()
+
+
 
     /**
      * 是否异步请求, true表示同步，默认为false表示异步请求
@@ -193,9 +243,14 @@ class DataFetcher<RequestType,ResultType> {
      * 更新结果，更新后会通知UI/ViewModel中的监察者
      * */
     private fun setValue(newValue: Resource<ResultType>?) {
-        if (newValue != null && result.value != newValue) {
-           // log("$debugName notify data changed...${newValue.status}")
-            result.postValue(newValue)
+//        if (newValue != null && result.value != newValue) {
+//           // log("$debugName notify data changed...${newValue.status}")
+//            result.postValue(newValue)
+//        }
+
+        if (newValue != null && observableResult.data != newValue)
+        {
+            observableResult.setValue(newValue)
         }
     }
 
@@ -419,4 +474,5 @@ class DataFetcher<RequestType,ResultType> {
     }
 
 }
+
 

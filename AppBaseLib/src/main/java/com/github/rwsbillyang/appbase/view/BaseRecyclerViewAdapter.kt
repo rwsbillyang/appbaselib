@@ -8,15 +8,11 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.github.rwsbillyang.appbase.util.logw
 
+abstract class BaseRecyclerViewAdapter<T,VH: RecyclerView.ViewHolder> : RecyclerView.Adapter<VH>(){
+    var list: MutableList<T> = ArrayList()
 
-/**
- * 简化RecyclerView.Adapter的使用，通常与PageHandler联合使用
- */
-abstract class PageRecyclerViewAdapter<T,VH: RecyclerView.ViewHolder> : RecyclerView.Adapter<VH>() {
 
-    private var list: List<T> = ArrayList()
-
-    val items get() = list
+    override fun getItemCount() = list.size
 
     fun getItem(position: Int):T?{
         if (position < 0 || position >= list.size)
@@ -36,41 +32,14 @@ abstract class PageRecyclerViewAdapter<T,VH: RecyclerView.ViewHolder> : Recycler
      */
     abstract fun createViewHolder(itemView: View): VH
 
-    override fun getItemCount() = list.size
-
-    /**
-     * 添加新数据，通常用于加载更多
-     * */
-    fun addListAtEnd(newList: List<T>?) {
-        if (newList == null || newList.isEmpty()) {
-            logw("newList is null or empty when addListAtEnd")
-        } else {
-            val position = list.size
-            this.list =  this.list.plus(newList)
-            this.notifyItemRangeInserted(position,newList.size)
-        }
-    }
-    /**
-     * 添加新数据，通常用于下拉刷新
-     * */
-    fun addListAtStart(newList: List<T>?) {
-        if (newList == null || newList.isEmpty()) {
-            logw("newList is null or empty when addListAtStart")
-        } else {
-            val position = list.size
-            this.list =  newList.plus(this.list)
-            this.notifyItemRangeInserted(0,newList.size)
-        }
-    }
     /**
      * 指定新数据,会覆盖以前的老旧数据
      * */
-    fun setList(newList: List<T>?)
-    {
+    fun setData(newList: List<T>?) {
         resetList()
         if (!newList.isNullOrEmpty()) {
-            this.list = newList
-           // log("newList data: ${newList.get(0).toString()}")
+            list = newList.toMutableList()
+            // log("newList data: ${newList.get(0).toString()}")
             this.notifyItemRangeInserted(0, newList.size)
         }
     }
@@ -91,6 +60,36 @@ abstract class PageRecyclerViewAdapter<T,VH: RecyclerView.ViewHolder> : Recycler
     }
 }
 
+/**
+ * 简化RecyclerView.Adapter的使用，通常与PageHandler联合使用
+ */
+abstract class PageRecyclerViewAdapter<T,VH: RecyclerView.ViewHolder> : BaseRecyclerViewAdapter<T,VH>() {
+    /**
+     * 添加新数据，通常用于加载更多
+     * */
+    fun addListAtEnd(newList: List<T>?) {
+        if (newList == null || newList.isEmpty()) {
+            logw("newList is null or empty when addListAtEnd")
+        } else {
+            val position = list.size
+            this.list =  this.list.plus(newList).toMutableList()
+            this.notifyItemRangeInserted(position,newList.size)
+        }
+    }
+    /**
+     * 添加新数据，通常用于下拉刷新
+     * */
+    fun addListAtStart(newList: List<T>?) {
+        if (newList == null || newList.isEmpty()) {
+            logw("newList is null or empty when addListAtStart")
+        } else {
+            this.list =  newList.plus(this.list).toMutableList()
+            this.notifyItemRangeInserted(0,newList.size)
+        }
+    }
+
+}
+
 
 /**
  * 简化RecyclerView.Adapter的使用
@@ -100,7 +99,7 @@ abstract class PageRecyclerViewAdapter<T,VH: RecyclerView.ViewHolder> : Recycler
  */
 abstract class DiffRecyclerViewAdapter<T,VH: RecyclerView.ViewHolder>(diffCallback: DiffUtil.ItemCallback<T>):
     RecyclerView.Adapter<VH>() {
-    private val mDiffer = AsyncListDiffer(this, diffCallback)
+    val mDiffer = AsyncListDiffer(this, diffCallback)
 
     open fun getItem(position: Int):T?{
         if (position < 0 || position >= getItemCount())
@@ -125,7 +124,13 @@ abstract class DiffRecyclerViewAdapter<T,VH: RecyclerView.ViewHolder>(diffCallba
 
 
     fun submitList(newList: List<T>?) {
+        if(newList.isNullOrEmpty())
+        {
+            logw("null or empty list submitted, ignore")
+            return
+        }
         mDiffer.submitList(newList)
+      //  this.notifyItemRangeInserted(0,newList.size)
     }
 
    open override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {

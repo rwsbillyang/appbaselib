@@ -144,7 +144,7 @@ open class PageHandler<QueryParameterType,ResultType>(
                     isloadingPage = false
                     _hasMore = (result.data?.size ?:0) >= pageSize
                     if( (result.data?.size ?:0) > 0){
-                        currentPage = currentPage + direction.vaule
+                        currentPage +=  direction.vaule
                         log("send pageVaule $currentPage, identifier:${result.identifier}")
                         pageIndex.value = Resource.success(result.identifier,currentPage)
                     }

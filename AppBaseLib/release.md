@@ -1,3 +1,9 @@
+1.2.2
+--------------
+1. DataFetcher返回对象为Observerable，以方便支持后台线程加载数据；并支持Observerable转换成LiveData，以便UI使用
+2. 为Fragment添加showDialog扩展
+3. 重构RecycleView的Adapter基类
+
 1.2.1
 --------------
 1. 添加 Preference PreferencesUtil 方便使用

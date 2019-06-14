@@ -228,7 +228,7 @@ open class Span {
 
 
     /**
-     * 简单地解析单个标签
+     * 简单地解析单个标签 限制：不支持嵌套标签，不支持拥有属性的标签
      * @param html, html text
      * @param tag, such as p, ,span, div etc.
      * @param tagSpan 标签内的文本格式，
@@ -248,7 +248,7 @@ open class Span {
             //+html
         }else{
             plainSpan(html.substring(0, startIndex))
-            val end:String = "</$tag>"
+            val end = "</$tag>"
             val endIndex = html.indexOf(end,startIndex+start.length,true)
 
             tagSpan(html.substring(startIndex+start.length, endIndex))
