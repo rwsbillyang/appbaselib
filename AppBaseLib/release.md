@@ -1,3 +1,12 @@
+1.2.3
+--------------
+1. dataFetcher中添加enableLog控制开关
+2. 修改NetConfiguration接口，将host放入其中，修改https自定义证书支持
+3. 改进NetManager中对自定义证书的支持
+4. 改进log的tag
+5. 添加NumberPickerPreference
+6. bugfix RecycleView中的列表数据类型错误
+
 1.2.2
 --------------
 1. DataFetcher返回对象为Observerable，以方便支持后台线程加载数据；并支持Observerable转换成LiveData，以便UI使用

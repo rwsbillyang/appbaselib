@@ -109,6 +109,11 @@ class DataFetcher<RequestType,ResultType> {
     //  var sync = false
 
     /**
+     * 是否打开log，默认true
+     * */
+    var enableLog = true
+
+    /**
      * 添加上名字，便于调试知道是哪个dataFetcher在执行取数据操作
      * */
     var debugName: String = ""
@@ -261,6 +266,9 @@ class DataFetcher<RequestType,ResultType> {
      * 当为aside模式时：再异步保存于本地，最后通知上层观察者
      * 当为remoteAsBackend模式时： 再同步保存到本地，若请求结果非正常，则额外通知上层观察者，最后再从本地获取数据。
      * 若网络不可用，先通知UI上层观察者
+     *
+     * https://developer.android.google.cn/kotlin/coroutines
+     * https://developer.android.google.cn/topic/libraries/architecture/coroutines
      * */
     fun fetchData() = CoroutineScope(IO).launch(
         if (enableCreateNewThread) newSingleThreadContext("io") else EmptyCoroutineContext
@@ -268,7 +276,9 @@ class DataFetcher<RequestType,ResultType> {
     {
        // log("$debugName fetch data...")
         val localResult = fetchFromLocal()
-        setValue(Resource.success(identifier,localResult))
+        if(localResult != null){
+            setValue(Resource.success(identifier,localResult))
+        }
 
         if (isForceRefreshBlock(localResult)) {
             if (NetAwareApplication.Instance.isNetworkAvailable()) {
@@ -281,19 +291,19 @@ class DataFetcher<RequestType,ResultType> {
                                 setValue(res) //非正常状态，告知UI层进行错误提示
                             } else {
                                 val affected = it.saveIntoLocalStorage()
-                                log("$debugName:$identifier save data into local because affected $affected records...")
+                                if(enableLog) log("$debugName:$identifier save data into local because affected $affected records...")
                                 if (affected > 0)//有修改记录才再次查询本地数据并通知，否则无需再去查询
                                 {
-                                    log("$debugName:$identifier reload data from local after save...")
+                                    if(enableLog) log("$debugName:$identifier reload data from local after save...")
                                     setValue(Resource.success(identifier,fetchFromLocal()))
                                 }else{
-                                    log("$debugName:$identifier skip reload data from local because no affected records")
+                                    if(enableLog) log("$debugName:$identifier skip reload data from local because no affected records")
                                     setValue(it.toResource())
                                 }
                             }
                         } else {
                             if (res.status == Status.OK) {
-                                log("$debugName:$identifier save data into local async...")
+                                if(enableLog) log("$debugName:$identifier save data into local async...")
                                 launch { it.saveIntoLocalStorage() }
                             }
                             setValue(it.toResource())
@@ -320,13 +330,13 @@ class DataFetcher<RequestType,ResultType> {
 //        }
         localBlock?.let {
             setValue(Resource.loading(identifier,null))
-            log("$debugName:$identifier fetch data from local...")
+            if(enableLog) log("$debugName:$identifier fetch data from local...")
             val result = if(enableMetrics)
             {
                 val now = System.currentTimeMillis()
                 val ret = withContext(IO) { localBlock!!() }
                 val delta = System.currentTimeMillis()- now
-                log("$debugName:$identifier fetch data from local, spend $delta ms")
+                if(enableLog)  log("$debugName:$identifier fetch data from local, spend $delta ms")
 
                 ret
             }else
@@ -347,12 +357,12 @@ class DataFetcher<RequestType,ResultType> {
     private suspend fun fetchFromRemote(): ApiResponse<RequestType>? {
         remoteBlock?.let {
             setValue(Resource.loading(identifier,null))
-            log("$debugName:$identifier fetch data from remote...")
+            if(enableLog) log("$debugName:$identifier fetch data from remote...")
             if(enableMetrics){
                 val now = System.currentTimeMillis()
                 val ret = withContext(IO) { remoteBlock!!().makeApiResponse() }
                 val delta = System.currentTimeMillis()- now
-                log("$debugName:$identifier fetch data from remote, spend $delta ms")
+                if(enableLog) log("$debugName:$identifier fetch data from remote, spend $delta ms")
 
                 return ret
             }
@@ -367,7 +377,7 @@ class DataFetcher<RequestType,ResultType> {
     private fun Call<RequestType>.makeApiResponse(): ApiResponse<RequestType> {
         return try {
             this.execute().let {
-                log(
+                if(enableLog) log(
                     "$debugName:$identifier response: message=${it.message()}, raw=${it.raw()}," +
                             " success=${it.isSuccessful},code=${it.code()},errBody=${it.errorBody()}"
                 )

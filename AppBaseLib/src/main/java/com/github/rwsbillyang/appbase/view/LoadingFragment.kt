@@ -22,7 +22,7 @@ abstract class LoadingFragment : Fragment() {
     {
         val loadingVisible = resource?.status == Status.LOADING || resource?.status == Status.ERR
 
-        loading.visible =loadingVisible
+        loading.visible = loadingVisible
         error_msg.visible = loadingVisible
         retryButton.visible = resource?.status == Status.ERR
 
@@ -37,5 +37,12 @@ abstract class LoadingFragment : Fragment() {
             error_msg.text = resource.httpStatus?.toString()?.let {it +": " + msg } ?:  msg
         }
         //log("updateLoading, loadingVisible=$loadingVisible,progressvisible=$progressvisible")
+    }
+    protected open fun hideLoading()
+    {
+        loading.visible = false
+        error_msg.visible = false
+        retryButton.visible = false
+        progress_bar.visible = false
     }
 }

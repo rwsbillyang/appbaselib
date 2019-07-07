@@ -1,14 +1,13 @@
+/*
+ * Author: rwsbillyang@qq.com yangchanggang@gmail.com
+ * Created At: 2019-07-05 19:23:05
+ *
+ * Copyright (c) 2019. All Rights Reserved.
+ *
+ */
+
 package com.github.rwsbillyang.appbase.net
 
-import android.app.Application
-import java.io.InputStream
-
-open class DefaultConfiguration(private var inputStreamList: List<InputStream>? = null): NetConfiguration {
-
-    override fun cetrificatesInputStreamList(): List<InputStream>? {
-       return inputStreamList
-    }
-    fun configureCetrificatesResources(application: Application, array: IntArray?){
-        inputStreamList = convertCertificatesReources(application,array)
-    }
+class DefaultConfiguration : NetConfiguration{
+    override fun host() = "http://localhost/"
 }

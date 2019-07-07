@@ -219,7 +219,7 @@ abstract class HeaderFooterAdapter<T,VH: RecyclerView.ViewHolder>(diffCallback: 
     override fun getItem(position: Int): T? {
         return  when(getItemViewType(position)){
             VIEW_TYPE_FOOTER -> null
-            VIEW_TYPE_FOOTER -> null
+            VIEW_TYPE_HEADER -> null
             VIEW_TYPE_ITEM -> super.getItem(position)
             else -> null
         }

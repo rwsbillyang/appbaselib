@@ -2,6 +2,7 @@ package com.github.rwsbillyang.appbase.net
 
 
 import android.os.Build
+import com.github.rwsbillyang.appbase.BuildConfig
 import com.github.rwsbillyang.appbase.util.logw
 import com.google.gson.GsonBuilder
 import okhttp3.*
@@ -15,57 +16,61 @@ import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.util.*
 import java.util.concurrent.TimeUnit
-import javax.net.ssl.SSLContext
-import javax.net.ssl.SSLSocketFactory
-import javax.net.ssl.TrustManagerFactory
-import javax.net.ssl.X509TrustManager
+import java.util.regex.Pattern
+import javax.net.ssl.*
 
 
 object NetManager {
-    private val map: MutableMap<String, RetrofitTriple> = HashMap<String, RetrofitTriple>() //site baseUrl -> RetrofitTriple
+    private val map: MutableMap<String, RetrofitTriple> = HashMap() //site baseUrl -> RetrofitTriple
     /**
      * 若提供全局的Http错误状态码处理器，则注册全局处理器
      * */
-    var errHandler: OnErrHandler? = null
+    private var errHandler: OnErrHandler? = null
 
-    var defaultConfig: NetConfiguration = DefaultConfiguration()
+    private var defaultConfig: NetConfiguration = DefaultConfiguration()
 
-    @JvmOverloads
-    fun getRetrofit(baseUrl: String, netConfig: NetConfiguration? = null): Retrofit {
+    fun registerDefaultConfiguration(config: NetConfiguration) {
+        defaultConfig = config
+    }
 
-        if (NetManager.empty(baseUrl)) {
-            throw IllegalStateException("baseUrl can not be null")
-        }
+//    fun registerConfiguration(config: NetConfiguration) {
+//        var triple = map[config.host()]
+//        if (triple != null) {
+//            triple.config = config
+//        } else {
+//            triple = RetrofitTriple(config, null, null)
+//            map[config.host()] = triple
+//        }
+//    }
 
-        var triple = map[baseUrl]
+
+   // @JvmOverloads
+    fun getRetrofit(netConfig: NetConfiguration): Retrofit {
+
+        val host = netConfig.host()
+
+        val triple = map[host]
         if (triple?.retrofit != null) {
             return triple.retrofit!!
         }
 
-        var config = netConfig
-        if (config == null) {
-            config = triple?.config
-            if (config == null)
-                config = defaultConfig
-        }
-        checkProvider(config)
 
         val gson = GsonBuilder()
                 .setDateFormat("yyyy-MM-dd HH:mm:ss")
                 .create()
 
-        val client = getClient(baseUrl, config)
+        val client = getClient(host, netConfig)
 
         val builder = Retrofit.Builder()
-                .baseUrl(baseUrl)
+                .baseUrl(host)
                 .client(client)
                 //.addCallAdapterFactory(CoroutineCallAdapterFactory())
                 //.addCallAdapterFactory(RxJava2CallAdapterFactory.create())
                 .addConverterFactory(GsonConverterFactory.create(gson))
 
-        var retrofit = builder.build()
+        val retrofit = builder.build()
         if (triple == null)
-            map[baseUrl] = RetrofitTriple(config, retrofit, client)
+            map[host] = RetrofitTriple(netConfig, retrofit, client)
         else {
             triple.retrofit = retrofit
             triple.client = client
@@ -76,14 +81,12 @@ object NetManager {
     }
 
     private fun getClient(baseUrl: String, provider: NetConfiguration): OkHttpClient {
-        if (empty(baseUrl)) {
-            throw IllegalStateException("baseUrl can not be null")
-        }
-        var client = map[baseUrl]?.client
+
+        val client = map[baseUrl]?.client
         if (client != null) {
             return client
         }
-        checkProvider(provider)
+
 
         val builder = OkHttpClient.Builder()
 
@@ -105,8 +108,6 @@ object NetManager {
         if (cookieJar != null) {
             builder.cookieJar(cookieJar)
         }
-
-        provider.configHttps(builder)
 
         val interceptors = provider.interceptors()
 
@@ -190,7 +191,9 @@ object NetManager {
                logw("forget to configure your certificates resources?")
             }else
             {
-                builder.socketFactory(getSSLSocketFactory(provider.cetrificatesInputStreamList()!!))
+                //builder.socketFactory(getSSLSocketFactory(provider.cetrificatesInputStreamList()!!))
+                
+                setupSSL(builder,provider.cetrificatesInputStreamList()!!.get(0),provider.passwd())
             }
         }
 
@@ -198,19 +201,7 @@ object NetManager {
         return builder.build()
     }
 
-    fun regiseterDefaultConfiguration(config: NetConfiguration) {
-        defaultConfig = config
-    }
 
-    fun regiseterConfiguration(baseUrl: String, config: NetConfiguration) {
-        var triple = map[baseUrl]
-        if (triple != null) {
-            triple.config = config
-        } else {
-            triple = RetrofitTriple(config, null, null)
-            map[baseUrl] = triple
-        }
-    }
     /**
      * 若提供全局的Http错误状态码处理器，则注册全局处理器
      * */
@@ -223,19 +214,9 @@ object NetManager {
         map.clear()
     }
 
-    private fun empty(baseUrl: String?): Boolean {
-        return baseUrl?.isEmpty()?:true
-        //return baseUrl == null || baseUrl.isEmpty()
-    }
 
     private fun empty(interceptors: Array<Interceptor>?): Boolean {
         return interceptors?.isEmpty()?:true
-    }
-
-    private fun checkProvider(provider: NetConfiguration?) {
-        if (provider == null) {
-            throw IllegalStateException("must register provider first")
-        }
     }
 
 
@@ -247,6 +228,7 @@ object NetManager {
      * http://blog.csdn.net/dd864140130/article/details/52625666
      * https://blog.csdn.net/lmj623565791/article/details/48129405
      * */
+    @Deprecated("not used")
     private fun getSSLSocketFactory(inputStreamArray: List<InputStream>): SSLSocketFactory? {
         //CertificateFactory用来证书生成
         val certificateFactory: CertificateFactory
@@ -286,6 +268,7 @@ object NetManager {
         return null
     }
 
+    @Deprecated("not used")
     private fun getDefaultTrustManager(): X509TrustManager {
         try {
             val trustManagerFactory = TrustManagerFactory.getInstance(
@@ -301,5 +284,81 @@ object NetManager {
             throw AssertionError() // The system has no TLS. Just give up.
         }
 
+    }
+
+    /**
+     * https://github.com/square/okhttp/blob/master/samples/guide/src/main/java/okhttp3/recipes/CustomTrust.java
+     *
+     *
+     * Returns a trust manager that trusts `certificates` and none other. HTTPS services whose
+     * certificates have not been signed by these certificates will fail with a `SSLHandshakeException`.
+     *
+     *
+     * This can be used to replace the host platform's built-in trusted certificates with a custom
+     * set. This is useful in development where certificate authority-trusted certificates aren't
+     * available. Or in production, to avoid reliance on third-party certificate authorities.
+     *
+     *
+     * See also [CertificatePinner], which can limit trusted certificates while still using
+     * the host platform's built-in trust store.
+     *
+     * <h3>Warning: Customizing Trusted Certificates is Dangerous!</h3>
+     *
+     *
+     * Relying on your own trusted certificates limits your server team's ability to update their
+     * TLS certificates. By installing a specific set of trusted certificates, you take on additional
+     * operational complexity and limit your ability to migrate between certificate authorities. Do
+     * not use custom trusted certificates in production without the blessing of your server's TLS
+     * administrator.
+     */
+    @Throws(GeneralSecurityException::class)
+    private fun setupSSL(builder: OkHttpClient.Builder, inputStream: InputStream, keyStorePassword: String? = null)
+    {
+        val certificates =  CertificateFactory.getInstance("X.509").run {
+            generateCertificates(inputStream)
+        }
+        inputStream.close()
+        if (certificates.isNullOrEmpty()) {
+            throw IllegalArgumentException("expected non-empty set of trusted certificates")
+        }
+
+        val password = keyStorePassword?.toCharArray()
+
+        // Put the certificates a key store.
+        val keyStore = KeyStore.getInstance(KeyStore.getDefaultType())
+            .apply {
+                load(null, password)
+                var index = 0
+                certificates.forEach { setCertificateEntry(Integer.toString(index++), it) }
+            }
+
+        // Use it to build an X509 trust manager.
+        val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
+            .apply { init(keyStore, password) }
+
+        val trustManager:X509TrustManager = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+            .apply { init(keyStore) }
+            .trustManagers
+            .takeWhile { it is  X509TrustManager }
+            .takeIf { it.isNotEmpty() }?.get(0) as? X509TrustManager ?:
+        throw IllegalStateException("Unexpected default trust managers" )
+
+
+        val sslSocketFactory = SSLContext.getInstance("TLS")
+            .apply { init(keyManagerFactory.keyManagers, arrayOf(trustManager), SecureRandom()) }
+            .socketFactory
+
+        builder
+            .hostnameVerifier { hostname, session -> isIp(hostname) }
+            .sslSocketFactory(if (BuildConfig.VERSION_CODE < 16)
+                    sslSocketFactory
+                else
+                    Tls12SocketFactory(sslSocketFactory), trustManager )
+
+    }
+
+    private fun isIp(ip:String): Boolean{
+        val pattern = Pattern.compile("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}")    //编译正则表达式
+        return pattern.matcher(ip).matches()    //创建给定输入模式的匹配器
     }
 }

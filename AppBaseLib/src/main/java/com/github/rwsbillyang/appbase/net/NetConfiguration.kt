@@ -3,12 +3,15 @@ package com.github.rwsbillyang.appbase.net
 import android.app.Application
 import okhttp3.CookieJar
 import okhttp3.Interceptor
-import okhttp3.OkHttpClient
 import java.io.InputStream
 
 
 interface NetConfiguration
 {
+    /**
+     * 主机地址，如 "http://localhost/"
+     * */
+    fun host(): String
     /**
      * 提供application Interceptor，无需日志和gzip 类型Interceptor，直接激活即可
      * */
@@ -34,7 +37,7 @@ interface NetConfiguration
      * */
     fun gzipRequestEnable() = true
 
-    fun configHttps(builder: OkHttpClient.Builder) = {}
+    //fun configHttps(builder: OkHttpClient.Builder) = {}
 
     fun cookie(): CookieJar? = null
 
@@ -57,19 +60,16 @@ interface NetConfiguration
     /**
      * 参考实现参见 DefaultConfiguration
      * */
-    fun cetrificatesInputStreamList(): List<InputStream>?
+    fun cetrificatesInputStreamList(): List<InputStream>? = null
 
+    /**
+     * keystore passwd
+     * */
+    fun passwd(): String? = null
     /**
      * 设置自定义证书文件
      * */
-    fun convertCertificatesReources(application: Application, array: IntArray?):List<InputStream>?
-    {
-        if(array != null && array.isNotEmpty())
-        {
-            return  List<InputStream>(array.size){application.resources.openRawResource(array[it])}
-        }
-        return null
-    }
-
+    fun convertCertificatesReources(application: Application, array: IntArray?)
+            = array?.map { application.resources.openRawResource(it) }
 
  }
