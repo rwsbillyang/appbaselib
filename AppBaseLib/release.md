@@ -1,3 +1,9 @@
+1.3.0
+--------------
+1. 重构NetManager，包括修改接口ClientConfiguration，支持双向认证
+2. 添加SslWebViewClient支持webview中的请求SSL认证
+3. 其它修改改进
+
 1.2.3
 --------------
 1. dataFetcher中添加enableLog控制开关

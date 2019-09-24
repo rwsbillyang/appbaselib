@@ -6,7 +6,7 @@ import okhttp3.Interceptor
 import java.io.InputStream
 
 
-interface NetConfiguration
+interface ClientConfiguration
 {
     /**
      * 主机地址，如 "http://localhost/"
@@ -47,29 +47,39 @@ interface NetConfiguration
 
     fun writeTimeoutMs(): Long = 10 * 1000L
 
-    /**
-     * 激活TLS1.2
-     * */
-    fun enableMordenTLS(): Boolean = true
 
     /**
-     * 自定义证书
+     * 是否激活自定义受信任证书，服务器身份证书
      * */
     fun enableCustomTrust(): Boolean = false
 
     /**
-     * 参考实现参见 DefaultConfiguration
+     * 服务器身份证书输入流列表，必须打开开关enableCustomTrust
+     * 须pem格式，即crt文件中内容
      * */
-    fun cetrificatesInputStreamList(): List<InputStream>? = null
+    fun trustCertInputStreamList(): List<InputStream>? = null
+
 
     /**
-     * keystore passwd
+     * 用于双向认证，服务器端需要对客户端认证时，客户端身份证书输入流，必须打开开关enableCustomTrust
+     * 须 PKCS12或BKS 等android支持的文件输入流
      * */
-    fun passwd(): String? = null
+    fun clientCertInputStream():InputStream? = null
+
     /**
-     * 设置自定义证书文件
+     * 客户端证书密码
      * */
-    fun convertCertificatesReources(application: Application, array: IntArray?)
-            = array?.map { application.resources.openRawResource(it) }
+    fun clientPass():String? = null
+
+    /**
+     * 客户端证书输入流格式
+     * */
+    fun clientCertType() :String = "PKCS12"
+
+    /**
+     * 设置自定义证书文件，用于转换
+     * */
+    fun convertCertificatesReources(application: Application, array: Array<Int>)
+            = array.map { application.resources.openRawResource(it) }
 
  }

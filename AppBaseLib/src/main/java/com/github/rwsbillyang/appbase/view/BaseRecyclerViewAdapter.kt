@@ -36,7 +36,8 @@ abstract class BaseRecyclerViewAdapter<T,VH: RecyclerView.ViewHolder> : Recycler
      * 指定新数据,会覆盖以前的老旧数据
      * */
     fun setData(newList: List<T>?) {
-        resetList()
+        if(list.isNotEmpty()) resetList()
+
         if (!newList.isNullOrEmpty()) {
             list = newList.toMutableList()
             // log("newList data: ${newList.get(0).toString()}")
