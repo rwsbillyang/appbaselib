@@ -4,9 +4,10 @@ package com.github.rwsbillyang.appbase.net
 import com.github.rwsbillyang.appbase.util.logw
 import okhttp3.Interceptor
 import okhttp3.Response
+
 import java.io.IOException
 
-class ErrorResponseInterceptor(private var errHandler: OnErrHandler): Interceptor{
+class ErrorResponseInterceptor(private var errHandler: OnErrHandler): Interceptor {
 
     @Throws(IOException::class)
     override fun intercept(chain: Interceptor.Chain): Response {
@@ -20,10 +21,10 @@ class ErrorResponseInterceptor(private var errHandler: OnErrHandler): Intercepto
         }else
         {
             //出现诸如404，500之内的错误, refer to ErrorMap
-            when(val code = response.code())
+            when(val code = response.code)
             {
                 in ErrorCodes ->{
-                    val msg = response.request().url().encodedPath() + " return " + (ErrorMap[code])?: response.message()
+                    val msg = response.request.url.encodedPath + " return " +( (ErrorMap[code])?: response.message)
                     logw(msg)
                     errHandler(code, msg)
                 }

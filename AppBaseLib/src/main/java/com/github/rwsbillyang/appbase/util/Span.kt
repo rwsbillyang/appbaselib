@@ -201,8 +201,8 @@ open class Span {
      * 添加一个click点击事件，并执行后面大括号中的代码块
      * */
     fun clickable(onClick: () -> Unit, init: Span.() -> Unit) {
-        val span = object : ClickableSpan() {
-            override fun onClick(view: View?) {
+        val span = object:  ClickableSpan() {
+            override fun onClick(view: View) {
                 onClick()
             }
         }

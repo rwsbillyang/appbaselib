@@ -24,9 +24,9 @@ import javax.net.ssl.HttpsURLConnection
 
 
 /**
- * 支持SSL双向认证的 WebViewClient
+ * 支持SSL双向认证的 WebViewClient since API 8
  *
- * TODO: 低于Build.VERSION_CODES.LOLLIPOP的版本可能工作不正常
+ * TODO: 低于Build.VERSION_CODES.LOLLIPOP的版本可能客户端身份认证工作不正常
  *
  * FIXME： OkHttpClient暂不能正常工作，忽略即可。
  *
@@ -158,7 +158,7 @@ class SslWebViewClient(
             return WebResourceResponse(
                 response.header("content-type", "text/plain"),
                 response.header("content-encoding", "utf-8"),
-                response.body()?.byteStream()
+                response.body?.byteStream()
             )
         } catch (e: Exception) {
             log("exception: ${e.message}")

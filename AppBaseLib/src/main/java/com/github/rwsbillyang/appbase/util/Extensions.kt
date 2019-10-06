@@ -4,11 +4,14 @@ import android.app.Activity
 import android.content.Context
 import android.content.DialogInterface
 import android.graphics.drawable.Drawable
+import android.os.Build
 import android.view.View
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.fragment.app.Fragment
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestListener
@@ -157,5 +160,19 @@ inline fun Fragment.gotoFragment(fragment: Fragment,containerId:Int, pushStack: 
             .beginTransaction()
             .replace(containerId,fragment)
             .commit()
+    }
+}
+
+/**
+ * 为Button设置左侧内部的内嵌图片
+ * */
+fun Button.setInlineLeftDrawable(drawable: Int, context: Context){
+    val drawable = AppCompatResources.getDrawable(context, drawable)
+
+    if(Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP)
+    {
+        this.setCompoundDrawablesWithIntrinsicBounds(drawable, null, null, null)
+    } else {
+        this.setCompoundDrawables(drawable, null, null, null)
     }
 }

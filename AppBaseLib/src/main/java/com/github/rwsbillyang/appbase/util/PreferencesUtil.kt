@@ -24,7 +24,7 @@ object PreferencesUtil {
     fun getValue(key: String, default: Any): Any = with(prefs) {
         return when (default) {
             is Int -> getInt(key, default)
-            is String -> getString(key, default)
+            is String -> getString(key, default)?:default
             is Long -> getLong(key, default)
             is Float -> getFloat(key, default)
             is Boolean -> getBoolean(key, default)

@@ -3,7 +3,6 @@ package com.github.rwsbillyang.appbase.net
 
 import android.os.Build
 import com.github.rwsbillyang.appbase.util.isIp
-import com.github.rwsbillyang.appbase.util.log
 import com.github.rwsbillyang.appbase.util.logw
 import com.google.gson.GsonBuilder
 import okhttp3.*
@@ -18,7 +17,9 @@ import java.security.SecureRandom
 import java.security.cert.CertificateException
 import java.util.*
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.HostnameVerifier
 import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLSession
 import javax.net.ssl.X509TrustManager
 
 
@@ -234,12 +235,16 @@ object OkHttpClientConfigHelper {
             val trustManager = trustMangers[0]as X509TrustManager
 
             //对于服务器身份认证，若是IP地址访问，则跳过，无需认证
-            builder.hostnameVerifier { hostname, session ->
-                val match = provider.host().matches(Regex("http(s)?://$hostname/"))
-                log("hostname=$hostname, match=$match")
-                hostname.isIp() || match
-            }
-                .sslSocketFactory(mySocketFactory, trustManager )
+            builder.hostnameVerifier(object:HostnameVerifier{
+                override fun verify(hostname:String, session: SSLSession)
+                        =  hostname.isIp() || provider.host().matches(Regex("http(s)?://$hostname/"))
+            }).sslSocketFactory(mySocketFactory, trustManager )
+
+            //builder.hostnameVerifier { hostname, session -> true }
+
+//            builder.hostnameVerifier{ hostname, session ->
+//                hostname.isIp() || provider.host().matches(Regex("http(s)?://$hostname/"))
+//            }.sslSocketFactory(mySocketFactory, trustManager )
 
         } catch (e: IOException) {
             e.printStackTrace()
