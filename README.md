@@ -1,3 +1,5 @@
+Deprecated, instead by KLib
+
 # appbaselib
 Android Appbase Library for speeding up development based on Android architecture components.
 
